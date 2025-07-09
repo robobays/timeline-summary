@@ -1,5 +1,7 @@
 FROM ollama/ollama
 
+RUN apt-get update -y && apt-get install nodejs npm -y
+
 WORKDIR /app
 
 COPY package.json .
