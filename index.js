@@ -9,14 +9,19 @@ const app = express();
 app.use(express.json());
 
 async function summarize(match, timeline) {
+  console.log(`Summarizing match ${match} with ${timeline.length} timeline events.`);
+
   const response = await ollama.chat({
     model: "llama3.1",
     messages: [
       { role: "system", content: PROMPT },
-      { role: "user", content: timeline },
+      { role: "user", content: JSON.stringify(timeline) },
     ],
   });
   fs.writeFileSync(match + ".json", JSON.stringify(response.message.content));
+
+  console.log(response.message);
+  console.log(`Summary for match ${match} saved.`);
 }
 
 app.get("/timeline-summary/:match", (request, response) => {
