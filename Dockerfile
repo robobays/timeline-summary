@@ -1,5 +1,7 @@
 FROM ollama/ollama
 
+ENTRYPOINT []
+
 RUN apt-get update -y && apt-get install nodejs npm -y
 
 WORKDIR /app
