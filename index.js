@@ -10,6 +10,7 @@ app.use(express.json());
 
 app.post("/timeline-summary", async (request, response) => {
   try {
+    const start = Date.now();
     const timeline = JSON.stringify(request.body);
     const result = await ollama.chat({
       model: "llama3.1",
@@ -18,7 +19,10 @@ app.post("/timeline-summary", async (request, response) => {
         { role: "user", content: timeline },
       ],
     });
-    response.json({ content: result.message.content });
+    response.json({
+      content: result.message.content,
+      millis: Date.now() - start,
+    });
   } catch (error) {
     console.error(error);
     response.status(500).json({ error: error.message || "Internal Server Error" });
