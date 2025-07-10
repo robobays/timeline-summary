@@ -1,6 +1,7 @@
 import fs from "fs";
 import express from "express";
 import ollama from "ollama";
+import fetch from "node-fetch";
 
 const FOLDER_TIMELINE = "timeline/";
 const FOLDER_SUMMARY = "summary/";
@@ -19,6 +20,8 @@ async function loadModel() {
   console.log("Model loaded:", result);
 }
 
+const fetchNoTimeout = (...args) => fetch(...args, { timeout: 0 });
+
 async function summarize(match, timeline) {
   console.log(`Summarizing match ${match} with ${timeline.length} timeline events.`);
 
@@ -29,6 +32,7 @@ async function summarize(match, timeline) {
     format: "json",
     stream: true,
     keep_alive: "24h",
+    fetch: fetchNoTimeout,
   });
 
   const content = [];
