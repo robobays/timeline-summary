@@ -7,6 +7,9 @@ const FOLDER_SUMMARY = "summary/";
 const PORT = process.env.PORT || 3000;
 const PROMPT = fs.readFileSync("prompt.txt", "utf-8");
 
+if (!fs.existsSync(FOLDER_TIMELINE)) fs.mkdirSync(FOLDER_TIMELINE);
+if (!fs.existsSync(FOLDER_SUMMARY)) fs.mkdirSync(FOLDER_SUMMARY);
+
 const app = express();
 app.use(express.json());
 
