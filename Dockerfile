@@ -12,4 +12,4 @@ RUN npm install --only=production
 COPY index.js ./index.js
 COPY prompt.txt ./prompt.txt
 
-CMD [ "node", "./index.js" ]
+CMD ["bash", "./go.sh"]

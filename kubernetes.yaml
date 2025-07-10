@@ -1,0 +1,65 @@
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: timeline-summary
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+spec:
+  rules:
+    - host: genai.superskill.me
+      http:
+        paths:
+          - backend:
+              service:
+                name: timeline-summary
+                port:
+                  number: 80
+            path: /timeline-summary
+            pathType: Prefix
+  tls:
+    - hosts:
+        - genai.superskill.me
+      secretName: https
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: timeline-summary
+spec:
+  selector:
+    module: timeline-summary
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+
+---
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: timeline-summary
+  labels:
+    module: timeline-summary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      module: timeline-summary
+  template:
+    metadata:
+      labels:
+        module: timeline-summary
+    spec:
+      containers:
+        - name: timeline-summary
+          image: docker.io/robobays/timeline-summary
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: 8Gi
+          ports:
+            - containerPort: 3000
