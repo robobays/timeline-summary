@@ -27,7 +27,6 @@ async function summarize(match, timeline) {
     system: PROMPT,
     prompt: JSON.stringify(timeline),
     format: "json",
-    raw: true,
     stream: true,
     keep_alive: "24h",
   });
