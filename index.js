@@ -51,7 +51,7 @@ async function runSummary() {
     const summary = await summarize(request.match, request.timeline);
 
     fs.writeFileSync(FOLDER_SUMMARY + match, summary, "utf-8");
-    fs.removeSync(FOLDER_TIMELINE + match);
+    fs.rmSync(FOLDER_TIMELINE + match);
 
     console.log("Saved summary:", match);
   }
