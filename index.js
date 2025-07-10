@@ -17,8 +17,17 @@ async function summarize(match, timeline) {
       { role: "system", content: PROMPT },
       { role: "user", content: JSON.stringify(timeline) },
     ],
+    stream: true,
   });
-  fs.writeFileSync(match + ".json", JSON.stringify(response.message.content));
+
+  const content = [];
+  for await (const chunk of response) {
+    if (chunk.message && chunk.message.content) {
+      console.log(":", chunk.message.content);
+      content.push(chunk.message.content);
+    }
+  }
+  fs.writeFileSync(match + ".json", content.join(""), "utf-8");
 
   console.log(response.message);
   console.log(`Summary for match ${match} saved.`);
