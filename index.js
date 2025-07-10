@@ -1,7 +1,8 @@
 import fs from "fs";
 import express from "express";
-import ollama from "ollama";
 import fetch from "node-fetch";
+import { Ollama } from "ollama";
+import { Agent } from "undici";
 
 const FOLDER_TIMELINE = "timeline/";
 const FOLDER_SUMMARY = "summary/";
@@ -11,6 +12,11 @@ const PROMPT = fs.readFileSync("prompt.txt", "utf-8");
 if (!fs.existsSync(FOLDER_TIMELINE)) fs.mkdirSync(FOLDER_TIMELINE);
 if (!fs.existsSync(FOLDER_SUMMARY)) fs.mkdirSync(FOLDER_SUMMARY);
 
+const ollama = new Ollama({
+  host: "http://127.0.0.1:11434",
+  fetch: (url, options) => fetch(url, { ...(options || {}), dispatcher: new Agent({ headersTimeout: 1800000 }) }),
+});
+
 const app = express();
 app.use(express.json());
 
@@ -19,8 +25,6 @@ async function loadModel() {
   const result = await ollama.generate({ model: "llama3.1", keep_alive: "24h" });
   console.log("Model loaded:", result);
 }
-
-const fetchNoTimeout = (...args) => fetch(...args, { timeout: 0 });
 
 async function summarize(match, timeline) {
   console.log(`Summarizing match ${match} with ${timeline.length} timeline events.`);
@@ -32,7 +36,6 @@ async function summarize(match, timeline) {
     format: "json",
     stream: true,
     keep_alive: "24h",
-    fetch: fetchNoTimeout,
   });
 
   const content = [];
