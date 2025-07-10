@@ -9,6 +9,7 @@ WORKDIR /app
 COPY package.json .
 RUN npm install --only=production
 
+COPY go.js ./go.js
 COPY index.js ./index.js
 COPY prompt.txt ./prompt.txt
 
