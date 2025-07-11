@@ -33,20 +33,14 @@ async function summarize(match, timeline) {
     model: "llama3.1",
     system: PROMPT,
     prompt: JSON.stringify(timeline),
-//    format: "json",
-    stream: true,
+    format: "json",
+    stream: false,
     keep_alive: "24h",
   });
 
-  const content = [];
-  for await (const chunk of response) {
-    console.log(":", JSON.stringify(chunk));
-    if (chunk.response) {
-      content.push(chunk.response);
-    }
-  }
+  console.log("Response received:", response);
 
-  return content.join("");
+  return response.response || "{}";
 }
 
 async function runSummary() {
