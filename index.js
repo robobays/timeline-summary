@@ -33,7 +33,7 @@ async function summarize(match, timeline) {
     model: "llama3.1",
     system: PROMPT,
     prompt: JSON.stringify(timeline),
-    format: "json",
+//    format: "json",
     stream: true,
     keep_alive: "24h",
   });
