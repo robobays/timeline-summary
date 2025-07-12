@@ -1,35 +1,34 @@
-import fs from "fs";
 import express from "express";
+import { MongoClient } from "mongodb";
 import fetch from "node-fetch";
 import { Ollama } from "ollama";
 import { Agent } from "undici";
 
-const FOLDER_TIMELINE = "timeline/";
-const FOLDER_SUMMARY = "summary/";
-const PORT = process.env.PORT || 3000;
+const DB_ADDRESS = "mongodb://mongo:27017";
+const DB_NAME = "timeline-summary";
+const DB_COLLECTION = "matches";
+const LLM_ADDRESS = "http://127.0.0.1:11434";
+const LLM_MODEL = "robobays";
+const SERVER_PORT = process.env.PORT || 3000;
 
-if (!fs.existsSync(FOLDER_TIMELINE)) fs.mkdirSync(FOLDER_TIMELINE);
-if (!fs.existsSync(FOLDER_SUMMARY)) fs.mkdirSync(FOLDER_SUMMARY);
-
+// Ollama
 const ollama = new Ollama({
-  host: "http://127.0.0.1:11434",
+  host: LLM_ADDRESS,
   fetch: (url, options) => fetch(url, { ...(options || {}), dispatcher: new Agent({ headersTimeout: 1800000 }) }),
 });
 
-const app = express();
-app.use(express.json());
-
 async function loadModel() {
-  console.log("Loading model...");
-  const result = await ollama.generate({ model: "robobays", keep_alive: "24h" });
+  console.log("Loading model:", LLM_MODEL);
+  const result = await ollama.generate({ model: LLM_MODEL, keep_alive: "24h" });
   console.log("Model loaded:", result);
 }
 
-async function summarize(match, timeline) {
+async function summarizeMatch(data) {
+  const { match, timeline } = data;
   console.log(`Summarizing match ${match} with ${timeline.length} timeline events.`);
 
   const response = await ollama.generate({
-    model: "robobays",
+    model: LLM_MODEL,
     prompt: JSON.stringify(timeline),
     format: "json",
     stream: false,
@@ -41,46 +40,83 @@ async function summarize(match, timeline) {
   return response.response || "{}";
 }
 
-async function runSummary() {
-  const matches = fs.readdirSync(FOLDER_TIMELINE);
+// MongoDB
+let db = null;
 
-  for (const match of matches) {
-    const request = JSON.parse(fs.readFileSync(FOLDER_TIMELINE + match, "utf-8"));
+async function matches() {
+  if (!db) {
+    const client = new MongoClient(DB_ADDRESS, { connectTimeoutMS: 0 });
 
-    const summary = await summarize(request.match, request.timeline);
+    await client.connect();
 
-    fs.writeFileSync(FOLDER_SUMMARY + match, summary, "utf-8");
-    fs.rmSync(FOLDER_TIMELINE + match);
-
-    console.log("Saved summary:", match);
+    db = client.db(DB_NAME).collection(DB_COLLECTION);
   }
 
-  setTimeout(runSummary, 10000);
+  return db;
 }
 
-app.get("/timeline-summary/:match", (request, response) => {
-  const match = request.params?.match;
-  const file = FOLDER_SUMMARY + match + ".json";
+async function findMatchToSummarize() {
+  return await (await matches()).findOne({
+    match: { $exists: true, $ne: null },
+    summary: { $exists: false },
+    timeline: { $exists: true, $ne: [] }
+  });
+}
 
-  if (match && fs.existsSync(file)) {
-    response.json(JSON.parse(fs.readFileSync(file, "utf-8")));
+async function readMatch(match) {
+  return await (await matches()).findOne({ match });
+}
+
+async function updateMatch(match, data) {
+  if (!match || (match !== data.match)) {
+    console.error("Bad match request:", match, data);
+  } else {
+    await (await matches()).updateOne({ match }, { $set: data }, { upsert: true });
+  }
+}
+
+async function processMatches() {
+  try {
+    const record = await findMatchToSummarize();
+
+    if (record) {
+      const summary = await summarizeMatch(record);
+
+      await updateMatch(record.match, { ...record, summary });
+
+      console.log("Saved summary:", record.match);
+    }
+  } catch (error) {
+    console.error("Error processing matches:", error);
+  }
+
+  setTimeout(processMatches, 10000);
+}
+
+// Express
+const app = express();
+app.use(express.json());
+
+app.get("/timeline-summary/:match", async (request, response) => {
+  const match = request.params?.match;
+  const record = await readMatch(match);
+
+  if (record) {
+    response.json(record);
   } else {
     response.json({ error: "No match found for: " + match });
   }
 });
 
 app.post("/timeline-summary/:match", async (request, response) => {
-  const match = request.params?.match;
-  const file = FOLDER_TIMELINE + match + ".json";
-
-  fs.writeFileSync(file, JSON.stringify(request.body), "utf-8");
+  await updateMatch(request.params?.match, request.body);
 
   response.json({ message: "OK" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+app.listen(SERVER_PORT, () => {
+  console.log(`Server listening on port ${SERVER_PORT}`);
 
   loadModel();
-  runSummary();
+  processMatches();
 });

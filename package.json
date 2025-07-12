@@ -1,13 +1,14 @@
 {
-  "name": "test",
-  "description": "daily pick",
+  "name": "timeline-summary",
+  "description": "Uses LLM to summarize a SC2 replay timeline",
   "version": "0.0.0",
   "type": "module",
   "main": "index.js",
   "dependencies": {
-    "ollama": "^0.5.16",
     "express": "^4.19.2",
+    "mongodb": "^6.0.0",
     "node-fetch": "^3.3.2",
+    "ollama": "^0.5.16",
     "undici": "^7.11.0"
   }
 }
