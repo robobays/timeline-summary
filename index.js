@@ -37,7 +37,7 @@ async function summarizeMatch(data) {
 
   console.log("Response received:", response);
 
-  return response.response || "{}";
+  return JSON.parse(response.response) || {};
 }
 
 // MongoDB
