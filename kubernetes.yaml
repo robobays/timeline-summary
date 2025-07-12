@@ -38,7 +38,7 @@ spec:
 
 ---
 
-kind: Deployment
+kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: timeline-summary
@@ -49,6 +49,7 @@ spec:
   selector:
     matchLabels:
       module: timeline-summary
+  serviceName: "timeline-summary"
   template:
     metadata:
       labels:
@@ -58,8 +59,27 @@ spec:
         - name: timeline-summary
           image: docker.io/robobays/timeline-summary
           imagePullPolicy: Always
+          env:
+            - name: OLLAMA_LOAD_TIMEOUT
+              value: "30m"
           resources:
             requests:
+              cpu: 7
               memory: 8Gi
           ports:
             - containerPort: 3000
+          volumeMounts:
+            - name: ollama
+              mountPath: /root/.ollama
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: ollama
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50Gi
+        storageClassName: default
