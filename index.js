@@ -7,7 +7,6 @@ import { Agent } from "undici";
 const FOLDER_TIMELINE = "timeline/";
 const FOLDER_SUMMARY = "summary/";
 const PORT = process.env.PORT || 3000;
-const PROMPT = fs.readFileSync("prompt.txt", "utf-8");
 
 if (!fs.existsSync(FOLDER_TIMELINE)) fs.mkdirSync(FOLDER_TIMELINE);
 if (!fs.existsSync(FOLDER_SUMMARY)) fs.mkdirSync(FOLDER_SUMMARY);
@@ -22,7 +21,7 @@ app.use(express.json());
 
 async function loadModel() {
   console.log("Loading model...");
-  const result = await ollama.generate({ model: "llama3.1", keep_alive: "24h" });
+  const result = await ollama.generate({ model: "robobays", keep_alive: "24h" });
   console.log("Model loaded:", result);
 }
 
@@ -30,8 +29,7 @@ async function summarize(match, timeline) {
   console.log(`Summarizing match ${match} with ${timeline.length} timeline events.`);
 
   const response = await ollama.generate({
-    model: "llama3.1",
-    system: PROMPT,
+    model: "robobays",
     prompt: JSON.stringify(timeline),
     format: "json",
     stream: false,

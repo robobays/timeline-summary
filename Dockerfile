@@ -11,6 +11,6 @@ RUN npm install --only=production
 
 COPY go.sh ./go.sh
 COPY index.js ./index.js
-COPY prompt.txt ./prompt.txt
+COPY Modelfile ./Modelfile
 
 CMD ["bash", "./go.sh"]

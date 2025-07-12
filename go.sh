@@ -9,8 +9,8 @@ until nc -z localhost 11434; do
   sleep 1
 done
 
-# Pull llama3.1 model
-ollama pull llama3.1
+# Create robobays model
+ollama create robobays -f Modelfile
 
 # Start the Node.js application
 node ./index.js
