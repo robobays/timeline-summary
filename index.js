@@ -35,8 +35,6 @@ async function summarizeMatch(data) {
     keep_alive: "24h",
   });
 
-  console.log("Response received:", response);
-
   return JSON.parse(response.response) || {};
 }
 
