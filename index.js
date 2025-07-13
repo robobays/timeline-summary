@@ -67,6 +67,10 @@ async function readMatch(match) {
   return await (await matches()).findOne({ match });
 }
 
+async function listRecentSummaries() {
+  return await (await matches()).find({ summary: { $exists: true } }).sort({ time: -1 });
+}
+
 async function updateMatch(match, data) {
   if (!match || (match !== data.match)) {
     console.error("Bad match request:", match, data);
@@ -96,6 +100,16 @@ async function processMatches() {
 // Express
 const app = express();
 app.use(express.json());
+
+app.get("/timeline-summary/recent", async (request, response) => {
+  const list = await listRecentSummaries();
+
+  if (list) {
+    response.json(list);
+  } else {
+    response.json({ error: "No recent match summaries found." });
+  }
+});
 
 app.get("/timeline-summary/:match", async (request, response) => {
   const match = request.params?.match;
