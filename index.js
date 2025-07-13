@@ -66,7 +66,7 @@ async function readMatch(match) {
 }
 
 async function listRecentSummaries() {
-  return await (await matches()).find({ summary: { $exists: true } }).sort({ time: -1 }).toArray();
+  return await (await matches()).find({ summary: { $exists: true } }).sort({ time: -1 }).limit(20).toArray();
 }
 
 async function updateMatch(match, data) {
