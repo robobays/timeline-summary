@@ -82,7 +82,10 @@ async function processMatches() {
     const record = await findMatchToSummarize();
 
     if (record) {
+      const time = Date.now();
       const summary = await summarizeMatch(record);
+
+      summary.processingTime = Date.now() - time;
 
       await updateMatch(record.match, { ...record, summary });
 
