@@ -54,11 +54,11 @@ async function matches() {
 }
 
 async function findMatchToSummarize() {
-  return await (await matches()).findOne({
+  return await (await matches()).find({
     match: { $exists: true, $ne: null },
     summary: { $exists: false },
     timeline: { $exists: true, $ne: [] }
-  });
+  }).sort({ time: -1 }).limit(1).next();
 }
 
 async function readMatch(match) {
@@ -66,7 +66,7 @@ async function readMatch(match) {
 }
 
 async function listRecentSummaries() {
-  return await (await matches()).find({ summary: { $exists: true } }).sort({ time: -1 });
+  return await (await matches()).find({ summary: { $exists: true } }).sort({ time: -1 }).toArray();
 }
 
 async function updateMatch(match, data) {
