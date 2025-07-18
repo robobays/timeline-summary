@@ -2,7 +2,7 @@ import express from "express";
 import { MongoClient } from "mongodb";
 import fetch from "node-fetch";
 import fs from "fs";
-import { GoogleGenAI } from "@google/gemini";
+import { GoogleGenAI } from "@google/genai";
 import { Ollama } from "ollama";
 import { Agent } from "undici";
 
