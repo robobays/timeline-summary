@@ -39,7 +39,7 @@ async function summarizeMatchWithOllama(timeline) {
 }
 
 // Gemma
-const gemma = new GoogleGenAI();
+const gemma = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 const gemmaSystemPrompt = extractFromText(fs.readFileSync("Modelfile", "utf8"), '"""', 3, '"""', 0);
 
 async function summarizeMatchWithGemma(model, timeline) {
