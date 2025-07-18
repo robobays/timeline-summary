@@ -1,4 +1,4 @@
-import express from "express";
+import express, { response } from "express";
 import { MongoClient } from "mongodb";
 import fetch from "node-fetch";
 import fs from "fs";
@@ -29,13 +29,15 @@ async function loadModel() {
 }
 
 async function summarizeMatchWithOllama(timeline) {
-  return extractJsonResponse(await ollama.generate({
+  const response = await ollama.generate({
     model: LLM_MODEL,
     prompt: JSON.stringify(timeline),
     format: "json",
     stream: false,
     keep_alive: "24h",
-  }));
+  });
+
+  return extractJsonResponse(response.response);
 }
 
 // Gemma
@@ -43,13 +45,15 @@ const gemma = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 const gemmaSystemPrompt = extractFromText(fs.readFileSync("Modelfile", "utf8"), '"""', 3, '"""', 0);
 
 async function summarizeMatchWithGemma(model, timeline) {
-  return extractJsonResponse(await gemma.models.generateContent({
+  const response = await gemma.models.generateContent({
     model,
     contents: [
       { role: "model", parts: [{ text: gemmaSystemPrompt }] },
       { role: "user", parts: [{ text: JSON.stringify(timeline) }] },
     ],
-  }));
+  });
+
+  return extractJsonResponse(response.text);
 }
 
 function extractJsonResponse(text) {
