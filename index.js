@@ -14,7 +14,7 @@ const LLM_MODEL = "robobays";
 const SERVER_PORT = process.env.PORT || 3000;
 
 const COOLDOWN_ON_ERROR = 3600000; // 1 hour
-const COOLDOWN_ON_SUCCESS = 10000; // 10 seconds
+const COOLDOWN_ON_SUCCESS = 60000; // 1 minute
 
 // Ollama
 const ollama = new Ollama({
