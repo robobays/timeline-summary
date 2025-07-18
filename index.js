@@ -97,9 +97,11 @@ async function matches() {
 }
 
 async function findMatchToSummarize(model) {
+  const modelKey = model.replaceAll(".", "-");
+
   return await (await matches()).find({
     match: { $exists: true, $ne: null },
-    [model]: { $exists: false },
+    [modelKey]: { $exists: false },
     timeline: { $exists: true, $ne: [] }
   }).sort({ time: -1 }).limit(1).next();
 }
@@ -132,12 +134,13 @@ async function processMatches(model) {
       console.log(`[${model}] Summarizing match ${match} with ${timeline.length} timeline events.`);
 
       const time = Date.now();
+      const modelKey = model.replaceAll(".", "-");
       const summary = (model === "llama3.1") ? await summarizeMatchWithOllama(timeline) : await summarizeMatchWithGemma(model, timeline);
 
       summary.model = model;
       summary.processingTime = Date.now() - time;
 
-      await updateMatch(record.match, { ...record, summary, [model]: summary });
+      await updateMatch(record.match, { ...record, summary, [modelKey]: summary });
 
       console.log(`[${model}] Saved summary for match ${match} in ${(summary.processingTime / 1000).toFixed(2)} seconds.`);
     }
