@@ -79,6 +79,8 @@ spec:
           image: docker.io/robobays/timeline-summary
           imagePullPolicy: Always
           env:
+            - name: GOOGLE_API_KEY
+              value: "<google_api_key>"
             - name: OLLAMA_LOAD_TIMEOUT
               value: "30m"
           resources:

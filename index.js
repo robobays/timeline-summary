@@ -1,6 +1,8 @@
 import express from "express";
 import { MongoClient } from "mongodb";
 import fetch from "node-fetch";
+import fs from "fs";
+import { GoogleGenAI } from "@google/gemini";
 import { Ollama } from "ollama";
 import { Agent } from "undici";
 
@@ -10,6 +12,9 @@ const DB_COLLECTION = "matches";
 const LLM_ADDRESS = "http://127.0.0.1:11434";
 const LLM_MODEL = "robobays";
 const SERVER_PORT = process.env.PORT || 3000;
+
+const COOLDOWN_ON_ERROR = 3600000; // 1 hour
+const COOLDOWN_ON_SUCCESS = 10000; // 10 seconds
 
 // Ollama
 const ollama = new Ollama({
@@ -23,19 +28,53 @@ async function loadModel() {
   console.log("Model loaded:", result);
 }
 
-async function summarizeMatch(data) {
-  const { match, timeline } = data;
-  console.log(`Summarizing match ${match} with ${timeline.length} timeline events.`);
-
-  const response = await ollama.generate({
+async function summarizeMatchWithOllama(timeline) {
+  return extractJsonResponse(await ollama.generate({
     model: LLM_MODEL,
     prompt: JSON.stringify(timeline),
     format: "json",
     stream: false,
     keep_alive: "24h",
-  });
+  }));
+}
 
-  return JSON.parse(response.response) || {};
+// Gemma
+const gemma = new GoogleGenAI();
+const gemmaSystemPrompt = extractFromText(fs.readFileSync("Modelfile", "utf8"), '"""', 3, '"""', 0);
+
+async function summarizeMatchWithGemma(model, timeline) {
+  return extractJsonResponse(await gemma.models.generateContent({
+    model,
+    contents: [
+      { role: "model", parts: [{ text: gemmaSystemPrompt }] },
+      { role: "user", parts: [{ text: JSON.stringify(timeline) }] },
+    ],
+  }));
+}
+
+function extractJsonResponse(text) {
+  const json = extractFromText(text, "{", 0, "}", 1);
+
+  if (json) {
+    try {
+      return JSON.parse(json);
+    } catch (error) {
+      console.error("Error parsing JSON:", error);
+
+      return { error: error.message };
+    }
+  }
+
+  return {};
+}
+
+function extractFromText(text, begin, bo, end, eo) {
+  const beginIndex = text.indexOf(begin);
+  const endIndex = text.lastIndexOf(end);
+
+  if ((beginIndex >= 0) && (endIndex > beginIndex)) {
+    return text.substring(beginIndex + bo, endIndex + eo);
+  }
 }
 
 // MongoDB
@@ -53,10 +92,10 @@ async function matches() {
   return db;
 }
 
-async function findMatchToSummarize() {
+async function findMatchToSummarize(model) {
   return await (await matches()).find({
     match: { $exists: true, $ne: null },
-    summary: { $exists: false },
+    [model]: { $exists: false },
     timeline: { $exists: true, $ne: [] }
   }).sort({ time: -1 }).limit(1).next();
 }
@@ -73,29 +112,38 @@ async function updateMatch(match, data) {
   if (!match || (match !== data.match)) {
     console.error("Bad match request:", match, data);
   } else {
-    await (await matches()).updateOne({ match }, { $set: data }, { upsert: true });
+    const collection = await matches();
+    const record = await collection.findOne({ match }) || {};
+
+    await collection.updateOne({ match }, { $set: { ...record, ...data } }, { upsert: true });
   }
 }
 
-async function processMatches() {
+async function processMatches(model) {
   try {
-    const record = await findMatchToSummarize();
+    const record = await findMatchToSummarize(model);
 
     if (record) {
-      const time = Date.now();
-      const summary = await summarizeMatch(record);
+      const { match, timeline } = record;
+      console.log(`[${model}] Summarizing match ${match} with ${timeline.length} timeline events.`);
 
+      const time = Date.now();
+      const summary = (model === "llama3.1") ? await summarizeMatchWithOllama(timeline) : await summarizeMatchWithGemma(model, timeline);
+
+      summary.model = model;
       summary.processingTime = Date.now() - time;
 
-      await updateMatch(record.match, { ...record, summary });
+      await updateMatch(record.match, { ...record, summary, [model]: summary });
 
-      console.log("Saved summary:", record.match);
+      console.log(`[${model}] Saved summary for match ${match} in ${(summary.processingTime / 1000).toFixed(2)} seconds.`);
     }
-  } catch (error) {
-    console.error("Error processing matches:", error);
-  }
 
-  setTimeout(processMatches, 10000);
+    setTimeout(() => processMatches(model), COOLDOWN_ON_SUCCESS);
+  } catch (error) {
+    console.error(`[${model}] Error processing matches: ${error.message}`);
+
+    setTimeout(() => processMatches(model), COOLDOWN_ON_ERROR);
+  }
 }
 
 // Express
@@ -129,9 +177,13 @@ app.post("/timeline-summary/:match", async (request, response) => {
   response.json({ message: "OK" });
 });
 
-app.listen(SERVER_PORT, () => {
+app.listen(SERVER_PORT, async () => {
   console.log(`Server listening on port ${SERVER_PORT}`);
 
-  loadModel();
-  processMatches();
+  await loadModel();
+  await matches();
+
+  processMatches("llama3.1");
+  processMatches("gemma-3-27b-it");
+  processMatches("gemini-2.5-pro");
 });
